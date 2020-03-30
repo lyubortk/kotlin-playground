@@ -3,6 +3,7 @@ import URLSearchParams from 'url-search-params';
 import TargetPlatform from "./target-platform";
 import {API_URLS} from "./config";
 import flatten from 'flatten'
+import jsonpipe from 'jsonpipe';
 import {
   findSecurityException,
   getExceptionCauses,
@@ -109,6 +110,34 @@ export default class WebDemoApi {
     })
   }
 
+  static executeKotlinCodeAsync(code, compilerVersion, platform, args, theme, hiddenDependencies, callback) {
+    return executeCodeAsync(API_URLS.COMPILE, code, compilerVersion, platform, args, hiddenDependencies, null, result => {
+      if (result.done) {
+        callback({
+          waitingForOutput: false
+        });
+        return
+      }
+      let data = result.value;
+      let output = "";
+      if (data.outStream) {
+        output = `<span class="standard-output ${theme}">${data.outStream}</span>`;
+      } else if (data.errStream) {
+        output = `<span class="error-output ${theme}">${data.errStream}</span>`
+      }
+      let exceptions = null;
+      if (data.exception != null) {
+        exceptions = findSecurityException(data.exception);
+        exceptions.causes = getExceptionCauses(exceptions);
+        exceptions.cause = undefined;
+      }
+      callback({
+        output: output,
+        exception: exceptions
+      });
+    })
+  }
+
   /**
    * Request for getting list of different completion proposals
    *
@@ -171,6 +200,46 @@ function executeCode(url, code, compilerVersion, targetPlatform, args, hiddenDep
       'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
     }
   }).then(response => response.json())
+}
+
+function executeCodeAsync(url, code, compilerVersion, targetPlatform, args, hiddenDependencies, options, callback) {
+  const files = [buildFileObject(code, DEFAULT_FILE_NAME)]
+    .concat(hiddenDependencies.map((file, index) => buildFileObject(file, `hiddenDependency${index}.kt`)));
+  const projectJson = JSON.stringify({
+    "id": "",
+    "name": "",
+    "args": args,
+    "compilerVersion": compilerVersion,
+    "confType": targetPlatform.id,
+    "originUrl": null,
+    "files": files,
+    "readOnlyFileNames": []
+  });
+
+  const body = new URLSearchParams();
+  body.set('filename', DEFAULT_FILE_NAME);
+  body.set('project', projectJson);
+
+  if (options !== undefined) {
+    for (let option in options) {
+      body.set(option, options[option])
+    }
+  }
+  jsonpipe.flow(url + targetPlatform.id, {
+    'success' : data => {
+      callback({'value': data})
+    },
+    'complete' : statusText => {
+      callback({'done': true})
+    },
+    'method': 'POST',
+    'headers': {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'Enable-Streaming': 'true'
+    },
+    'data': body.toString(),
+    "withCredentials": false
+  });
 }
 
 /**

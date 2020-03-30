@@ -248,12 +248,14 @@ export default class ExecutableFragment extends ExecutableCodeTemplate {
       return
     }
     this.update({
+      output: null,
+      exception: null,
       waitingForOutput: true,
       openConsole: false
     });
     if (onOpenConsole) onOpenConsole(); //open when waitingForOutput=true
     if (onRun) onRun();
-    if (targetPlatform === TargetPlatform.JAVA || targetPlatform === TargetPlatform.JUNIT) {
+    if (targetPlatform === TargetPlatform.JUNIT) {
       WebDemoApi.executeKotlinCode(
         this.getCode(),
         compilerVersion,
@@ -274,6 +276,28 @@ export default class ExecutableFragment extends ExecutableCodeTemplate {
         },
         () => this.update({waitingForOutput: false})
       )
+    } else if (targetPlatform === TargetPlatform.JAVA) {
+      WebDemoApi.executeKotlinCodeAsync(
+        this.getCode(),
+        compilerVersion,
+        targetPlatform,
+        args,
+        theme,
+        hiddenDependencies, state => {
+          if (state.output || state.exception) {
+            state.openConsole = true;
+          }
+          let output1 = "";
+          if (state.output) {
+            output1 = state.output
+          }
+          let output2 = "";
+          if (this.state.output) {
+            output2 = this.state.output
+          }
+          state.output = output2 + output1;
+          this.update(state);
+        })
     } else {
       this.jsExecutor.reloadIframeScripts(jsLibs, this.getNodeForMountIframe());
       WebDemoApi.translateKotlinToJs(this.getCode(), compilerVersion, targetPlatform, args, hiddenDependencies).then(

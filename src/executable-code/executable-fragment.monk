@@ -18,26 +18,25 @@
           {% if (openConsole) %}
             <div class="console-close {{ theme }}" :onclick={{ this.onConsoleCloseButtonEnter.bind(this) }}></div>
           {% endif %}
+          {% if (output && output != "") || exception %}
+              <div class="output-wrapper {{ theme }}">
+                  <div class="code-output">
+                      {% unsafe output %}
+
+                      {% if exception %}
+                          <Exception
+                            {{...exception}}
+                            originalException={{ true }}
+                            onExceptionClick={{ this.onExceptionClick.bind(this) }}
+                          />
+                      {% endif %}
+                  </div>
+              </div>
+          {% endif %}
           {% if (waitingForOutput) %}
               <div class="output-wrapper {{ theme }}">
                 <div class="loader {{ theme }}"></div>
               </div>
-          {% else %}
-              {% if (output && output != "") || exception %}
-                  <div class="output-wrapper {{ theme }}">
-                      <div class="code-output">
-                          {% unsafe output %}
-
-                          {% if exception %}
-                              <Exception
-                                {{...exception}}
-                                originalException={{ true }}
-                                onExceptionClick={{ this.onExceptionClick.bind(this) }}
-                              />
-                          {% endif %}
-                      </div>
-                  </div>
-              {% endif %}
           {% endif %}
         </div>
     </div>

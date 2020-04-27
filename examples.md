@@ -41,11 +41,13 @@ Turns into:
 
 ```kotlin
 class Contact(val id: Int, var email: String) 
-
-fun main(args: Array<String>) {
-    val contact = Contact(1, "mary@gmail.com")
-    println(contact.id)
+//sampleStart
+fun main() {
+    for (i in 0..300) {
+        print("$i ")
+    }
 }
+//sampleEnd
 ```
 
 </div>

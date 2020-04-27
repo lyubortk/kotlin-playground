@@ -74,6 +74,7 @@ export default class ExecutableFragment extends ExecutableCodeTemplate {
     const events = options.eventFunctions;
     if (events && events.getInstance) events.getInstance(instance);
 
+    instance.element = element
     return instance;
   }
 
@@ -230,7 +231,7 @@ export default class ExecutableFragment extends ExecutableCodeTemplate {
     // creates a new iframe and removes the old one, thereby stops execution of any running script
     if (targetPlatform === TargetPlatform.CANVAS || targetPlatform === TargetPlatform.JS)
       this.jsExecutor.reloadIframeScripts(jsLibs, this.getNodeForMountIframe());
-    this.update({output: "", openConsole: false, exception: null});
+    this.update({output: null, openConsole: false, exception: null});
     if (onCloseConsole) onCloseConsole();
   }
 
@@ -287,16 +288,24 @@ export default class ExecutableFragment extends ExecutableCodeTemplate {
           if (state.output || state.exception) {
             state.openConsole = true;
           }
-          let output1 = "";
+          const initialization = this.state.output === null;
+          this.state.output = []
+
+          let pushLast = false
           if (state.output) {
-            output1 = state.output
+            this.state.output.push(state.output)
+            pushLast = true
           }
-          let output2 = "";
-          if (this.state.output) {
-            output2 = this.state.output
+          state.output = this.state.output;
+          if (initialization || (state.waitingForOutput === false) || state.openConsole !== this.state.openConsole) {
+            this.update(state);
           }
-          state.output = output2 + output1;
-          this.update(state);
+          if (pushLast) {
+            const template = document.createElement('template');
+            template.innerHTML = state.output[state.output.length - 1].trim();
+            const node = template.content.firstChild;
+            this.element.getElementsByClassName("code-output").item(0).appendChild(node)
+          }
         })
     } else {
       this.jsExecutor.reloadIframeScripts(jsLibs, this.getNodeForMountIframe());

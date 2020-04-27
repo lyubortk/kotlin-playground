@@ -288,21 +288,15 @@ export default class ExecutableFragment extends ExecutableCodeTemplate {
           if (state.output || state.exception) {
             state.openConsole = true;
           }
-          const initialization = this.state.output === null;
-          this.state.output = []
 
-          let pushLast = false
-          if (state.output) {
-            this.state.output.push(state.output)
-            pushLast = true
-          }
-          state.output = this.state.output;
+          const initialization = this.state.output === null;
           if (initialization || (state.waitingForOutput === false) || state.openConsole !== this.state.openConsole) {
             this.update(state);
           }
-          if (pushLast) {
+
+          if (state.output) {
             const template = document.createElement('template');
-            template.innerHTML = state.output[state.output.length - 1].trim();
+            template.innerHTML = state.output.trim();
             const node = template.content.firstChild;
             this.element.getElementsByClassName("code-output").item(0).appendChild(node)
           }
